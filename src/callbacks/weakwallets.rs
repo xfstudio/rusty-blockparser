@@ -136,7 +136,7 @@ impl Callback for WeakWallets {
 
         // Keep in sync with c'tor
         // for f in vec!["blocks", "transactions", "tx_in", "tx_out"] {
-        for f in vec!["weakwallets"] {
+        for f in vec!["weak_wallets"] {
             fs::rename(self.dump_folder.as_path().join(format!("{}.csv.tmp", f)),
                        self.dump_folder.as_path().join(format!("{}-{}-{}.csv", f, self.start_height, self.end_height)))
                 .expect("Unable to rename tmp file!");

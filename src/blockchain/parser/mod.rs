@@ -1,8 +1,10 @@
+use std::collections::{VecDeque, HashMap};
+use std::hash::BuildHasherDefault;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread::{self, JoinHandle};
-use std::collections::{VecDeque, HashMap};
 
 use time;
+use twox_hash::XxHash;
 
 use blockchain::proto::Hashed;
 use blockchain::utils::blkfile::BlkFile;
@@ -44,8 +46,8 @@ struct WorkerStats {
 /// Implements simple thread pool pattern
 pub struct BlockchainParser<'a> {
     //TODO: make the collections for headers and blocks more generic
-    unsorted_headers: HashMap<[u8; 32], BlockHeader>,   /* holds all headers in parse mode HeadersOnly  */
-    unsorted_blocks:  HashMap<[u8; 32], Block>,         /* holds all blocks in parse mode FullData      */
+    unsorted_headers: HashMap<[u8; 32], BlockHeader, BuildHasherDefault<XxHash>>,   /* holds all headers in parse mode HeadersOnly  */
+    unsorted_blocks:  HashMap<[u8; 32], Block, BuildHasherDefault<XxHash>>,         /* holds all blocks in parse mode FullData      */
     remaining_files:  Arc<Mutex<VecDeque<BlkFile>>>,    /* Remaining files (shared between all threads) */
     h_workers:        Vec<JoinHandle<()>>,              /* Worker job handles                           */
     mode:             ParseMode,                        /* ParseMode (FullData or Indexing)           */
@@ -227,7 +229,7 @@ impl<'a> BlockchainParser<'a> {
         self.chain_storage.consume_next();
     }
 
-    /// Internal method which gets called if all workers are finished
+    /// Internal method whichs gets called if all workers are finished
     /// Saves the chain state
     fn on_complete(&mut self) -> OpResult<()> {
         let t_fin = time::precise_time_s();

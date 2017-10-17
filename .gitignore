@@ -8,3 +8,4 @@ csvdump
 .project
 .idea
 .DS_Store
+.sync-config.cson

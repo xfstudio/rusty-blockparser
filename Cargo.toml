@@ -11,18 +11,20 @@ keywords = ["Cryptocurrency", "Bitcoin", "Litecoin", "Blockchain", "Parser"]
 license = "GPL-3.0"
 
 [dependencies]
-time            = "~0.1"
-log             = "~0.3"
-clap            = "~2.16"
-rust-crypto     = "~0.2"
-rustc-serialize = "~0.3"
-byteorder       = "~0.5"
-rust-base58     = "~0.0"
-seek_bufread    = "~1.2"
+csv             = "~0.15"
+time            = ">=0.1"
+log             = ">=0.3"
+clap            = ">=2.16"
+rust-crypto     = ">=0.2"
+rustc-serialize = ">=0.3"
+byteorder       = ">=0.5"
+rust-base58     = ">=0.0"
+seek_bufread    = ">=1.2"
+twox-hash       = ">=1.0.1"
 
 # The development profile, used for `cargo build`
 [profile.dev]
-opt-level = 0                # Controls the --opt-level the compiler builds with
+opt-level = 3                # Controls the --opt-level the compiler builds with
 debug = true                 # Controls whether the compiler passes `-g`
 rpath = false                # Controls whether the compiler passes `-C rpath`
 lto = false                  # Controls `-C lto` for binaries and staticlibs
@@ -33,7 +35,7 @@ codegen-units = 1            # Controls whether the compiler passes `-C codegen-
 # The release profile, used for `cargo build --release`
 [profile.release]
 opt-level = 3
-debug = false
+debug = true
 rpath = false
 lto = true
 debug-assertions = false

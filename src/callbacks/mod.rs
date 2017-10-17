@@ -1,7 +1,12 @@
 pub mod stats;
+pub mod clusterizer;
 pub mod csvdump;
+<<<<<<< HEAD
 pub mod unspentcsvdump;
 pub mod weakwallets;
+=======
+pub mod txoutdump;
+>>>>>>> f2ea846121e95169b996cc9530d03fd397f59ea4
 
 use clap::{ArgMatches, App};
 

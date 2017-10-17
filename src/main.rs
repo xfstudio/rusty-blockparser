@@ -40,12 +40,9 @@ use callbacks::Callback;
 use callbacks::stats::SimpleStats;
 use callbacks::clusterizer::Clusterizer;
 use callbacks::csvdump::CsvDump;
-<<<<<<< HEAD
 use callbacks::unspentcsvdump::UnspentCsvDump;
 use callbacks::weakwallets::WeakWallets;
-=======
 use callbacks::txoutdump::TxOutDump;
->>>>>>> f2ea846121e95169b996cc9530d03fd397f59ea4
 
 
 /// Holds all available user arguments
@@ -263,17 +260,14 @@ fn parse_args() -> OpResult<ParserOptions> {
          callback = Box::new(try!(SimpleStats::new(matches)));
     } else if let Some(ref matches) = matches.subcommand_matches("csvdump") {
          callback = Box::new(try!(CsvDump::new(matches)));
-<<<<<<< HEAD
     } else if let Some(ref matches) = matches.subcommand_matches("unspentcsvdump") {
          callback = Box::new(try!(UnspentCsvDump::new(matches)));
     } else if let Some(ref matches) = matches.subcommand_matches("weakwallets") {
          callback = Box::new(try!(WeakWallets::new(matches)));
-=======
     } else if let Some(ref matches) = matches.subcommand_matches("txoutdump") {
           callback = Box::new(try!(TxOutDump::new(matches)));
     } else if let Some(ref matches) = matches.subcommand_matches("clusterizer") {
          callback = Box::new(try!(Clusterizer::new(matches)));
->>>>>>> f2ea846121e95169b996cc9530d03fd397f59ea4
     } else {
         clap::Error {
             message: String::from("error: No Callback specified.\nFor more information try --help"),

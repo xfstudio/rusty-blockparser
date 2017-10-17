@@ -202,6 +202,7 @@ SUBCOMMANDS:
     csvdump        Dumps the whole blockchain into CSV files
     help           Prints this message or the help of the given subcommand(s)
     simplestats    Shows various Blockchain stats
+    weakwallets    Dumps the weak wallets into CSV files
 ```
 ### Example
 

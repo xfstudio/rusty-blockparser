@@ -1,6 +1,7 @@
 pub mod stats;
 pub mod csvdump;
 pub mod unspentcsvdump;
+pub mod weakwallets;
 
 use clap::{ArgMatches, App};
 

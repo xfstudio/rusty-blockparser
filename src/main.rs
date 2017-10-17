@@ -39,6 +39,7 @@ use callbacks::Callback;
 use callbacks::stats::SimpleStats;
 use callbacks::csvdump::CsvDump;
 use callbacks::unspentcsvdump::UnspentCsvDump;
+use callbacks::weakwallets::WeakWallets;
 
 
 /// Holds all available user arguments
@@ -225,6 +226,7 @@ fn parse_args() -> OpResult<ParserOptions> {
         .subcommand(UnspentCsvDump::build_subcommand())
         .subcommand(CsvDump::build_subcommand())
         .subcommand(SimpleStats::build_subcommand())
+        .subcommand(WeakWallets::build_subcommand())
         .get_matches();
 
     // Set flags
@@ -255,6 +257,8 @@ fn parse_args() -> OpResult<ParserOptions> {
          callback = Box::new(try!(CsvDump::new(matches)));
     } else if let Some(ref matches) = matches.subcommand_matches("unspentcsvdump") {
          callback = Box::new(try!(UnspentCsvDump::new(matches)));
+    } else if let Some(ref matches) = matches.subcommand_matches("weakwallets") {
+         callback = Box::new(try!(WeakWallets::new(matches)));
     } else {
         clap::Error {
             message: String::from("error: No Callback specified.\nFor more information try --help"),

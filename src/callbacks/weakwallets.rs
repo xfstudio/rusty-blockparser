@@ -19,6 +19,7 @@ use blockchain::utils;
 pub struct WeakWallets {
     // Each structure gets stored in a seperate csv file
     dump_folder:    PathBuf,
+    block_writer:   BufWriter<File>,
     ww_writer:   BufWriter<File>,
 
     start_height:   usize,
@@ -42,9 +43,13 @@ impl WeakWallets {
         for tx in &block.txs {
             for input in &tx.value.inputs {
                 if input.script_sig.len() > 74 {
-                    println!("{} {}", utils::arr_to_hex(&input.script_sig), utils::arr_to_hex(&input.script_sig).len());
                     let tmp_sig = utils::arr_to_hex(&input.script_sig);
                     r_arr.push(tmp_sig[10..64].to_string());
+                    info!(target: "block_r_arr", "{}\t{}\t{}", 
+                        utils::arr_to_hex(&input.script_sig), 
+                        utils::arr_to_hex(&input.script_sig).len(), 
+                        tmp_sig[10..64].to_string()
+                    );
                 }
             }
         }
@@ -56,6 +61,11 @@ impl WeakWallets {
             let n: i8 = 0;
             for r in arr {
                 if sig[10..64].to_string() == r.to_string() {
+                    info!(target: "repeat_r", "{}\t{}\t{}", 
+                        sig[10..64].to_string(), 
+                        r.to_string(), 
+                        n.to_string()
+                    );
                     let n = n + 1;
                     if n > 1 {
                         return true;
@@ -86,6 +96,7 @@ impl Callback for WeakWallets {
             let cap = 4000000;
             let cb = WeakWallets {
                 dump_folder:    PathBuf::from(dump_folder),
+                block_writer:   try!(WeakWallets::create_writer(cap, dump_folder.join("blocks.csv.tmp"))),
                 ww_writer:   try!(WeakWallets::create_writer(cap, dump_folder.join("weak_wallets.csv.tmp"))),
                 start_height: 0, end_height: 0, tx_count: 0, in_count: 0, out_count: 0
             };
@@ -105,11 +116,10 @@ impl Callback for WeakWallets {
     }
 
     fn on_block(&mut self, block: Block, block_height: usize) {
-        self.start_height = block_height;
-        // self.block_writer.write_all(block.save_csv(block_height).as_bytes()).unwrap();
-
         // let block_hash = utils::arr_to_hex_swapped(&block.header.hash);
         let r_arr = WeakWallets::block_r_arr(&block);
+
+        self.block_writer.write_all(block.save_csv(block_height).as_bytes()).unwrap();
         for tx in block.txs {
             // self.tx_writer.write_all(tx.save_csv(&block_hash).as_bytes()).unwrap();
             let txid_str = utils::arr_to_hex_swapped(&tx.hash);
@@ -136,7 +146,7 @@ impl Callback for WeakWallets {
 
         // Keep in sync with c'tor
         // for f in vec!["blocks", "transactions", "tx_in", "tx_out"] {
-        for f in vec!["weak_wallets"] {
+        for f in vec!["blocks", "weak_wallets"] {
             fs::rename(self.dump_folder.as_path().join(format!("{}.csv.tmp", f)),
                        self.dump_folder.as_path().join(format!("{}-{}-{}.csv", f, self.start_height, self.end_height)))
                 .expect("Unable to rename tmp file!");
@@ -154,10 +164,13 @@ impl Block {
     #[inline]
     fn save_csv(&self, block_height: usize) -> String {
         // (@hash, height, version, blocksize, @hashPrev, @hashMerkleRoot, nTime, nBits, nNonce)
+        // (@hash, height, block_r, blocksize, @hashPrev, @hashMerkleRoot, nTime, nBits, nNonce)
+        let block_r = WeakWallets::block_r_arr(&self);
         format!("{};{};{};{};{};{};{};{};{}\n",
             &utils::arr_to_hex_swapped(&self.header.hash),
             &block_height,
-            &self.header.value.version,
+            // &self.header.value.version,
+            &block_r.join(" "),
             &self.blocksize,
             &utils::arr_to_hex_swapped(&self.header.value.prev_hash),
             &utils::arr_to_hex_swapped(&self.header.value.merkle_root),

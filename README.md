@@ -240,3 +240,5 @@ If you find this project helpful, please consider making a donation:
 ## TODO
 
 * Implement Pay2MultiSig script evaluation
+.\target\debug\rusty-blockparser.exe --reindex -d f:\database\blocks\test\ weakwallets .\target\debug
+

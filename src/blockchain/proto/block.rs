@@ -20,22 +20,32 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(blk_index: u32, blk_offset: usize,
-               blocksize: u32, header: BlockHeader,
-               tx_count: VarUint, txs: Vec<Tx>) -> Block {
+    pub fn new(
+        blk_index: u32,
+        blk_offset: usize,
+        blocksize: u32,
+        header: BlockHeader,
+        tx_count: VarUint,
+        txs: Vec<Tx>,
+    ) -> Block {
         Block {
             blk_index: blk_index,
             blk_offset: blk_offset,
             blocksize: blocksize,
             header: Hashed::double_sha256(header),
             tx_count: tx_count,
-            txs: txs.into_iter().map(|tx| Hashed::double_sha256(tx)).collect(),
+            txs: txs.into_iter()
+                .map(|tx| Hashed::double_sha256(tx))
+                .collect(),
         }
     }
 
     /// Computes merkle root for all containing transactions
     pub fn compute_merkle_root(&self) -> [u8; 32] {
-        merkle_root(&self.txs.iter().map(|tx| tx.hash).collect::<Vec<[u8; 32]>>())
+        merkle_root(&self.txs
+            .iter()
+            .map(|tx| tx.hash)
+            .collect::<Vec<[u8; 32]>>())
     }
 
     /// Calculates merkle root and verifies it against the field in BlockHeader
@@ -54,11 +64,11 @@ impl Block {
 impl fmt::Debug for Block {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("Block")
-           .field("blk_index", &self.blk_index)
-           .field("blk_offset", &self.blk_offset)
-           .field("header", &self.header)
-           .field("tx_count", &self.tx_count)
-           .finish()
+            .field("blk_index", &self.blk_index)
+            .field("blk_offset", &self.blk_offset)
+            .field("header", &self.header)
+            .field("tx_count", &self.tx_count)
+            .finish()
     }
 }
 
@@ -75,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_get_base_reward() {
-        assert_eq!(get_base_reward(0),      5000000000);
+        assert_eq!(get_base_reward(0), 5000000000);
         assert_eq!(get_base_reward(209999), 5000000000);
         assert_eq!(get_base_reward(210000), 2500000000);
         assert_eq!(get_base_reward(419999), 2500000000);

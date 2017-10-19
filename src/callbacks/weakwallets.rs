@@ -22,6 +22,8 @@ pub struct WeakWallets {
 
     start_height:   usize,
     end_height:     usize,
+    compare_count:  u64,
+    weak_count:  u64,
     tx_count:       u64,
     in_count:       u64,
     out_count:      u64
@@ -34,31 +36,6 @@ impl WeakWallets {
             Err(err) => return Err(OpError::from(err))
         };
         Ok(BufWriter::with_capacity(cap, file))
-    }
-
-    fn repeat_r(sig: String, arr: &Vec<String>) ->bool {
-        debug!(target: "repeat_r(sig)", "{}\t{}", sig, sig.len().to_string());
-        if sig.len() == 64 {
-            let n: i8 = 0;
-            for r in arr {
-                info!(target: "repeat_r(sig,r,n)", "{}\t{}\t{}", 
-                    sig.to_string(), 
-                    r.to_string(), 
-                    n.to_string()
-                );
-                if sig.to_string() == r.to_string() {
-                    let n = n + 1;
-                    if n > 1 {
-                        info!(target: "repeat_r found!(sig,n)", "{}\t{}", 
-                            sig, 
-                            n.to_string()
-                        );
-                        return true
-                    }
-                }
-            }
-        }
-       false
     }
 }
 
@@ -83,7 +60,7 @@ impl Callback for WeakWallets {
                 dump_folder:    PathBuf::from(dump_folder),
                 r_value:        HashMap::with_capacity(10000000),
                 ww_writer:      try!(WeakWallets::create_writer(cap, dump_folder.join("weak_wallets.csv.tmp"))),
-                start_height: 0, end_height: 0, tx_count: 0, in_count: 0, out_count: 0
+                start_height: 0, end_height: 0, compare_count: 0, weak_count: 0, tx_count: 0, in_count: 0, out_count: 0
             };
             Ok(cb)
         })() {
@@ -144,15 +121,35 @@ impl Callback for WeakWallets {
             let txid = &key[0..63];
             // let index = &key[64..key.len()-1];
             let tmp_r = value[10..74].to_string();
-            let result = WeakWallets::repeat_r(tmp_r, &r_arr);
-            if result {
-                self.ww_writer.write_all(format!(
-                    "{};{}\n",
-                    txid,
-                    value
-                    ).as_bytes()
-                ).unwrap();
+            // let result = WeakWallets::repeat_r(tmp_r, &r_arr);
+            if tmp_r.len() == 64 {
+                self.compare_count += 1;
+                let n: i8 = 0;
+                for r in &r_arr {
+                    debug!(target: "repeat_r(tmp_r,r,n)", "{}\t{}\t{}", 
+                        tmp_r.to_string(), 
+                        r.to_string(), 
+                        n.to_string()
+                    );
+                    if tmp_r.to_string() == r.to_string() {
+                        let n = n + 1;
+                        if n > 1 {
+                            self.weak_count += 1;
+                            info!(target: "repeat_r found!(tmp_r,n)", "{}\t{}", 
+                                tmp_r, 
+                                n.to_string()
+                            );
+                            self.ww_writer.write_all(format!(
+                                "{};{}\n",
+                                txid,
+                                value
+                                ).as_bytes()
+                            ).unwrap();
+                        }
+                    }
+                }
             }
+            info!(target: "repeat_r", "compare {} found {}", self.compare_count, self.weak_count);
         }
 
         // Keep in sync with c'tor

@@ -40,16 +40,16 @@ impl WeakWallets {
     }
 
     fn repeat_r(sig: String, arr: &Vec<String>) ->bool {
-        if sig.len() > 74 {
+        if sig.len() == 64 {
             let n: i8 = 0;
             for r in arr {
+                debug!(target: "repeat_r", "{}\t{}\t{}", 
+                    sig.to_string(), 
+                    r.to_string(), 
+                    n.to_string()
+                );
                 if sig.to_string() == r.to_string() {
                     let n = n + 1;
-                    debug!(target: "repeat_r", "{}\t{}\t{}", 
-                        sig.to_string(), 
-                        r.to_string(), 
-                        n.to_string()
-                    );
                     if n > 1 {
                         return true
                     }
@@ -57,16 +57,6 @@ impl WeakWallets {
             }
         }
        false
-    }
-
-    fn read_input(pause: bool) -> io::Result<()> {
-        if pause {
-            let mut input = String::new();
-            try!(io::stdin().read_line(&mut input));
-            println!("pause: {}", input.trim());
-            
-        }
-        Ok(())
     }
 }
 
@@ -145,6 +135,8 @@ impl Callback for WeakWallets {
             let tmp_sig = &value[10..73].to_string();
             r_arr.push(tmp_sig.clone())
         }
+
+        info!(target: "r_arr.len", "{}", &r_arr.len().to_string());
 
         for (key, value) in self.r_value.iter() {
             let txid = &key[0..63];

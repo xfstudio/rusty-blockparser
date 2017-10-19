@@ -2,13 +2,15 @@ use std::fs::{self, File};
 use std::path::PathBuf;
 use std::io::{BufWriter, Write};
 use std::string::String;
+use std::io;
+use std::collections::HashMap;
 
 use clap::{Arg, ArgMatches, App, SubCommand};
 
 use callbacks::Callback;
 use errors::{OpError, OpResult};
 
-use blockchain::proto::tx::{TxInput};
+use blockchain::proto::tx;
 use blockchain::parser::types::CoinType;
 use blockchain::proto::block::Block;
 use blockchain::utils;
@@ -18,7 +20,8 @@ use blockchain::utils;
 pub struct WeakWallets {
     // Each structure gets stored in a seperate csv file
     dump_folder:    PathBuf,
-    ww_writer:   BufWriter<File>,
+    r_value:        HashMap<String, String>,
+    ww_writer:      BufWriter<File>,
 
     start_height:   usize,
     end_height:     usize,
@@ -35,21 +38,18 @@ impl WeakWallets {
         };
         Ok(BufWriter::with_capacity(cap, file))
     }
-    fn compute_r(sig: &[u8]) -> String {
-        utils::arr_to_hex(sig)[10..63].to_string()
-    }
 
     fn repeat_r(sig: String, arr: &Vec<String>) ->bool {
         if sig.len() > 74 {
             let n: i8 = 0;
             for r in arr {
                 if sig.to_string() == r.to_string() {
-                    info!(target: "repeat_r", "{}\t{}\t{}", 
-                        sig[10..64].to_string(), 
+                    let n = n + 1;
+                    debug!(target: "repeat_r", "{}\t{}\t{}", 
+                        sig.to_string(), 
                         r.to_string(), 
                         n.to_string()
                     );
-                    let n = n + 1;
                     if n > 1 {
                         return true
                     }
@@ -57,6 +57,16 @@ impl WeakWallets {
             }
         }
        false
+    }
+
+    fn read_input(pause: bool) -> io::Result<()> {
+        if pause {
+            let mut input = String::new();
+            try!(io::stdin().read_line(&mut input));
+            println!("pause: {}", input.trim());
+            
+        }
+        Ok(())
     }
 }
 
@@ -79,7 +89,8 @@ impl Callback for WeakWallets {
             let cap = 4000000;
             let cb = WeakWallets {
                 dump_folder:    PathBuf::from(dump_folder),
-                ww_writer:   try!(WeakWallets::create_writer(cap, dump_folder.join("weak_wallets.csv.tmp"))),
+                r_value:        HashMap::with_capacity(10000000),
+                ww_writer:      try!(WeakWallets::create_writer(cap, dump_folder.join("weak_wallets.csv.tmp"))),
                 start_height: 0, end_height: 0, tx_count: 0, in_count: 0, out_count: 0
             };
             Ok(cb)
@@ -98,29 +109,56 @@ impl Callback for WeakWallets {
     }
 
     fn on_block(&mut self, block: Block, block_height: usize) {
-        self.start_height = block_height;
-        let mut r_arr: Vec<String> = Vec::new();
+        self.end_height = block_height;
+        debug!(target: "on_block", "processing...\nDumped {} block:{}\n\
+                                   \t-> transactions: {:9}\n\
+                                   \t-> inputs:       {:9}\n\
+                                   \t-> outputs:      {:9}",
+             self.end_height + 1, block.blk_index, self.tx_count, self.in_count, self.out_count);
+
         for tx in &block.txs {
-            for input in &tx.value.inputs {
-                r_arr.push(WeakWallets::compute_r(&input.script_sig));
+            let txid_str = utils::arr_to_hex_swapped(&tx.hash);
+            for (i, input) in tx.value.inputs.iter().enumerate() {
+                let tmp_r = utils::arr_to_hex(&input.script_sig);
+                if tmp_r.len() > 74 {
+                    self.r_value.insert(txid_str.clone() +  &i.to_string(), tmp_r.clone());
+                }
             }
             self.in_count += tx.value.in_count.value;
             self.out_count += tx.value.out_count.value;
         }
         self.tx_count += block.tx_count.value;
 
-        for tx in &block.txs {
-            let txid_str = utils::arr_to_hex_swapped(&tx.hash);
-            for input in &tx.value.inputs {
-                if WeakWallets::repeat_r(WeakWallets::compute_r(&input.script_sig), &r_arr) {
-                    self.ww_writer.write_all(input.save_csv(&txid_str).as_bytes()).unwrap();
-                }
-            }
-        }
     }
 
     fn on_complete(&mut self, block_height: usize) {
         self.end_height = block_height;
+        self.ww_writer.write_all(format!(
+            "{};{}\n",
+            "txid",
+            "sig"
+            ).as_bytes()
+        ).unwrap();
+
+        let mut r_arr: Vec<String> = Vec::new();
+        for (key, value) in self.r_value.iter() {
+            let tmp_sig = &value[10..73].to_string();
+            r_arr.push(tmp_sig.clone())
+        }
+
+        for (key, value) in self.r_value.iter() {
+            let txid = &key[0..63];
+            // let index = &key[64..key.len()-1];
+            let tmp_r = value[10..73].to_string();
+            if WeakWallets::repeat_r(tmp_r, &r_arr) {
+                self.ww_writer.write_all(format!(
+                    "{};{}\n",
+                    txid,
+                    value
+                    ).as_bytes()
+                ).unwrap();
+            }
+        }
 
         // Keep in sync with c'tor
         // for f in vec!["blocks", "transactions", "tx_in", "tx_out"] {
@@ -135,18 +173,5 @@ impl Callback for WeakWallets {
                                    \t-> inputs:       {:9}\n\
                                    \t-> outputs:      {:9}",
              self.end_height + 1, self.tx_count, self.in_count, self.out_count);
-    }
-}
-
-impl TxInput {
-    #[inline]
-    fn save_csv(&self, txid: &str) -> String {
-        // (@txid, @hashPrevOut, indexPrevOut, scriptSig, sequence)
-        format!("{};{};{};{};{}\n",
-            &txid,
-            &utils::arr_to_hex_swapped(&self.outpoint.txid),
-            &self.outpoint.index,
-            &utils::arr_to_hex(&self.script_sig),
-            &self.seq_no)
     }
 }

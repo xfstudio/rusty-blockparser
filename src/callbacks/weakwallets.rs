@@ -40,10 +40,11 @@ impl WeakWallets {
     }
 
     fn repeat_r(sig: String, arr: &Vec<String>) ->bool {
+        info!(target: "repeat_r", "{}\t{}", sig, sig.len().to_string());
         if sig.len() == 64 {
             let n: i8 = 0;
             for r in arr {
-                debug!(target: "repeat_r", "{}\t{}\t{}", 
+                info!(target: "repeat_r", "{}\t{}\t{}", 
                     sig.to_string(), 
                     r.to_string(), 
                     n.to_string()

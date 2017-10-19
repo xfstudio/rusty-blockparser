@@ -2,15 +2,12 @@ use std::fs::{self, File};
 use std::path::PathBuf;
 use std::io::{BufWriter, Write};
 use std::string::String;
-use std::io;
 use std::collections::HashMap;
 
 use clap::{Arg, ArgMatches, App, SubCommand};
 
 use callbacks::Callback;
 use errors::{OpError, OpResult};
-
-use blockchain::proto::tx;
 use blockchain::parser::types::CoinType;
 use blockchain::proto::block::Block;
 use blockchain::utils;
@@ -40,11 +37,11 @@ impl WeakWallets {
     }
 
     fn repeat_r(sig: String, arr: &Vec<String>) ->bool {
-        info!(target: "repeat_r", "{}\t{}", sig, sig.len().to_string());
+        debug!(target: "repeat_r(sig)", "{}\t{}", sig, sig.len().to_string());
         if sig.len() == 64 {
             let n: i8 = 0;
             for r in arr {
-                info!(target: "repeat_r", "{}\t{}\t{}", 
+                info!(target: "repeat_r(sig,r,n)", "{}\t{}\t{}", 
                     sig.to_string(), 
                     r.to_string(), 
                     n.to_string()
@@ -52,6 +49,10 @@ impl WeakWallets {
                 if sig.to_string() == r.to_string() {
                     let n = n + 1;
                     if n > 1 {
+                        info!(target: "repeat_r found!(sig,n)", "{}\t{}", 
+                            sig, 
+                            n.to_string()
+                        );
                         return true
                     }
                 }
@@ -133,7 +134,7 @@ impl Callback for WeakWallets {
 
         let mut r_arr: Vec<String> = Vec::new();
         for (key, value) in self.r_value.iter() {
-            let tmp_sig = &value[10..73].to_string();
+            let tmp_sig = &value[10..74].to_string();
             r_arr.push(tmp_sig.clone())
         }
 
@@ -142,8 +143,9 @@ impl Callback for WeakWallets {
         for (key, value) in self.r_value.iter() {
             let txid = &key[0..63];
             // let index = &key[64..key.len()-1];
-            let tmp_r = value[10..73].to_string();
-            if WeakWallets::repeat_r(tmp_r, &r_arr) {
+            let tmp_r = value[10..74].to_string();
+            let result = WeakWallets::repeat_r(tmp_r, &r_arr);
+            if result {
                 self.ww_writer.write_all(format!(
                     "{};{}\n",
                     txid,

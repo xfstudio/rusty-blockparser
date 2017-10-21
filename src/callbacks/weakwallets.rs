@@ -41,14 +41,14 @@ impl WeakWallets {
 
     fn compute_r(sig: String) -> String {
         // sig[10..74].to_string()
-        sig[10..15].to_string()
+        sig[10..74].to_string()
     }
 
     fn repeat_r(sig: String, arr: &Vec<String>) -> bool {
         debug!(target: "repeat_r(sig)", "{}\t{}", sig, sig.len().to_string());
         // if sig.len() == 64 {
-        if sig.len() == 5 {
-            let n: i8 = 0;
+        if sig.len() == 64 {
+            let mut n = 0;
             for r in arr {
                 debug!(target: "repeat_r(sig,r,n)", "{}\t{}\t{}", 
                     sig.to_string(), 
@@ -56,7 +56,7 @@ impl WeakWallets {
                     n.to_string()
                 );
                 if sig.to_string() == r.to_string() {
-                    let n = n + 1;
+                    n += 1;
                     if n > 1 {
                         info!(target: "repeat_r found!(sig,n)", "{}\t{}", 
                             sig, 
@@ -170,7 +170,7 @@ impl Callback for WeakWallets {
 
         for (key, value) in self.r_value.iter() {
             let txid = &key[0..64];
-            let block_index = &key[64..key.len()];
+            let block_index = &key[64..];
             let filepath = self.temp_folder.as_path().join(&block_index.to_string());
             debug!(target:"on_complete(txid, block_index, filepath)", "{}\t{}\t{}", txid, block_index, filepath.display().to_string());
             let r_arr = WeakWallets::fread(filepath);
@@ -203,5 +203,38 @@ impl Callback for WeakWallets {
                                    \t-> inputs:       {:9}\n\
                                    \t-> outputs:      {:9}",
              self.end_height + 1, self.tx_count, self.in_count, self.out_count);
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File, OpenOptions};
+    use std::path::PathBuf;
+    use std::io::{BufWriter, Write, BufReader};
+    use std::io::prelude::*;
+    use std::string::String;
+    use std::collections::HashMap;
+
+    use clap::{Arg, ArgMatches, App, SubCommand};
+
+    use callbacks::Callback;
+    use errors::{OpError, OpResult};
+    use blockchain::parser::types::CoinType;
+    use blockchain::proto::block::Block;
+    use blockchain::utils;
+
+    #[test]
+    fn test_weak_wallets_repa() {
+        let sig = "00c";
+        let filename = "~/workplace/rust/rusty-blockparser/target/debug/temp/0";
+        let file = File::open(filename).unwrap();
+        let fin = BufReader::new(file);
+        let mut arr = Vec::new();
+      
+        for line in fin.lines() {
+            arr.push(line.unwrap());
+        }
+
+        assert_eq!(true, WeakWallets::repeat_r(sig.to_string(), &arr));
     }
 }
